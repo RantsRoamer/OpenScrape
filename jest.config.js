@@ -8,7 +8,10 @@ module.exports = {
     '**/?(*.)+(spec|test).ts',
   ],
   transform: {
-    '^.+\\.tsx?$': ['ts-jest', { tsconfig: 'tsconfig.jest.json' }],
+    '^.+\\.tsx?$': ['ts-jest', { 
+      tsconfig: 'tsconfig.jest.json',
+      isolatedModules: false,
+    }],
     '^.+\\.jsx?$': 'babel-jest',
   },
   transformIgnorePatterns: [
