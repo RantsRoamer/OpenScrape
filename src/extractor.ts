@@ -4,13 +4,9 @@
 
 import TurndownService from 'turndown';
 import { gfm } from 'turndown-plugin-gfm';
-import cheerioDefault from 'cheerio';
-import * as cheerioNamespace from 'cheerio';
+import * as cheerio from 'cheerio';
 import type { CheerioAPI } from 'cheerio';
 import { ExtractionSchema, ScrapedData } from './types';
-
-// Support both ESM default (macOS/Node) and CJS namespace (Windows/Ubuntu)
-const cheerio = (cheerioDefault?.load != null) ? cheerioDefault : cheerioNamespace;
 
 export class DataExtractor {
   private turndown: TurndownService;
