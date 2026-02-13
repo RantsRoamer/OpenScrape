@@ -9,6 +9,7 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import { OpenScrape } from './scraper';
 import { ScrapeOptions } from './types';
+import { toHtml, toText, toCsv, toYaml } from './formatters';
 
 const program = new Command();
 
@@ -23,25 +24,42 @@ program
   .argument('<url>', 'URL to scrape')
   .option('-o, --output <path>', 'Output file path', 'output.json')
   .option('--no-render', 'Disable JavaScript rendering')
-  .option('--format <format>', 'Output format (json|markdown)', 'json')
+  .option('--format <format>', 'Output format: json|markdown|html|text|csv|yaml', 'json')
   .option('--wait-time <ms>', 'Wait time after page load (ms)', '2000')
   .option('--max-depth <number>', 'Maximum pagination depth', '10')
   .option('--next-selector <selector>', 'CSS selector for next link')
   .option('--timeout <ms>', 'Request timeout (ms)', '30000')
   .option('--user-agent <ua>', 'Custom user agent string')
+  .option('--download-media', 'Download images to a local folder (organized by site/path)')
+  .option('--media-dir <path>', 'Directory for downloaded media (default: ./media)', './media')
+  .option('--embed-images', 'Base64-embed small images in JSON output')
+  .option('--embed-images-max-size <bytes>', 'Max size in bytes for embedded images (default: 51200)', '51200')
+  .option('--llm-extract', 'Use local LLM (Ollama/LM Studio) to extract structured JSON')
+  .option('--llm-endpoint <url>', 'LLM endpoint (e.g. http://localhost:11434 for Ollama)')
+  .option('--llm-model <name>', 'Model name (e.g. llama2)', 'llama2')
+  .option('--auto-detect-schema', 'Auto-detect extraction schema from the page (opt-in)')
   .action(async (url: string, options) => {
     try {
       const scraper = new OpenScrape();
-      
+
+      const format = ['json', 'markdown', 'html', 'text', 'csv', 'yaml'].includes(options.format) ? options.format : 'json';
       const scrapeOptions: ScrapeOptions = {
         url,
         render: options.render !== false,
-        format: options.format === 'markdown' ? 'markdown' : 'json',
+        format: format as ScrapeOptions['format'],
         waitTime: parseInt(options.waitTime, 10),
         maxDepth: parseInt(options.maxDepth, 10),
         nextSelector: options.nextSelector,
         timeout: parseInt(options.timeout, 10),
         userAgent: options.userAgent,
+        downloadMedia: options.downloadMedia === true,
+        mediaOutputDir: options.mediaDir,
+        base64EmbedImages: options.embedImages === true,
+        base64EmbedMaxBytes: parseInt(options.embedImagesMaxSize, 10) || 51200,
+        llmExtract: options.llmExtract === true,
+        llmEndpoint: options.llmEndpoint,
+        llmModel: options.llmModel,
+        autoDetectSchema: options.autoDetectSchema === true,
       };
 
       console.log(`Scraping ${url}...`);
@@ -54,13 +72,22 @@ program
       const outputDir = path.dirname(outputPath);
       await fs.mkdir(outputDir, { recursive: true });
 
-      if (options.format === 'markdown') {
+      const fmt = format;
+      if (fmt === 'markdown') {
         const markdown = `# ${data.title || 'Untitled'}\n\n` +
           (data.author ? `**Author:** ${data.author}\n\n` : '') +
           (data.publishDate ? `**Published:** ${data.publishDate}\n\n` : '') +
           `**URL:** ${data.url}\n\n` +
           `---\n\n${data.markdown || data.content}\n`;
         await fs.writeFile(outputPath, markdown, 'utf-8');
+      } else if (fmt === 'html') {
+        await fs.writeFile(outputPath, toHtml(data), 'utf-8');
+      } else if (fmt === 'text') {
+        await fs.writeFile(outputPath, toText(data), 'utf-8');
+      } else if (fmt === 'csv') {
+        await fs.writeFile(outputPath, toCsv(data), 'utf-8');
+      } else if (fmt === 'yaml') {
+        await fs.writeFile(outputPath, toYaml(data), 'utf-8');
       } else {
         await fs.writeFile(outputPath, JSON.stringify(data, null, 2), 'utf-8');
       }
@@ -78,11 +105,19 @@ program
   .argument('<file>', 'File containing URLs (one per line)')
   .option('-o, --output-dir <path>', 'Output directory', './output')
   .option('--no-render', 'Disable JavaScript rendering')
-  .option('--format <format>', 'Output format (json|markdown)', 'json')
+  .option('--format <format>', 'Output format: json|markdown|html|text|csv|yaml', 'json')
   .option('--wait-time <ms>', 'Wait time after page load (ms)', '2000')
   .option('--max-depth <number>', 'Maximum pagination depth', '10')
   .option('--timeout <ms>', 'Request timeout (ms)', '30000')
   .option('--max-concurrency <number>', 'Maximum concurrent requests', '3')
+  .option('--download-media', 'Download images to a local folder')
+  .option('--media-dir <path>', 'Directory for downloaded media (default: <output-dir>/media)', '')
+  .option('--embed-images', 'Base64-embed small images in JSON output')
+  .option('--embed-images-max-size <bytes>', 'Max size in bytes for embedded images (default: 51200)', '51200')
+  .option('--llm-extract', 'Use local LLM (Ollama/LM Studio) to extract structured data')
+  .option('--llm-endpoint <url>', 'LLM endpoint (e.g. http://localhost:11434 for Ollama)')
+  .option('--llm-model <name>', 'Model name for LLM extraction', 'llama2')
+  .option('--auto-detect-schema', 'Auto-detect extraction schema from each page')
   .action(async (file: string, options) => {
     try {
       const scraper = new OpenScrape({
@@ -102,31 +137,51 @@ program
       const outputDir = path.resolve(options.outputDir);
       await fs.mkdir(outputDir, { recursive: true });
 
+      const mediaDir = options.mediaDir || path.join(outputDir, 'media');
+      const batchFormat = ['json', 'markdown', 'html', 'text', 'csv', 'yaml'].includes(options.format) ? options.format : 'json';
       const scrapeOptions: Partial<ScrapeOptions> = {
         render: options.render !== false,
+        format: batchFormat as ScrapeOptions['format'],
         waitTime: parseInt(options.waitTime, 10),
         maxDepth: parseInt(options.maxDepth, 10),
         timeout: parseInt(options.timeout, 10),
+        downloadMedia: options.downloadMedia === true,
+        mediaOutputDir: options.downloadMedia ? mediaDir : undefined,
+        base64EmbedImages: options.embedImages === true,
+        base64EmbedMaxBytes: parseInt(options.embedImagesMaxSize, 10) || 51200,
+        llmExtract: options.llmExtract === true,
+        llmEndpoint: options.llmEndpoint,
+        llmModel: options.llmModel,
+        autoDetectSchema: options.autoDetectSchema === true,
       };
 
       const results = await scraper.scrapeBatch(urls, scrapeOptions);
       
       await scraper.close();
 
-      // Save results
+      const extMap: Record<string, string> = { json: 'json', markdown: 'md', html: 'html', text: 'txt', csv: 'csv', yaml: 'yaml' };
+      const ext = extMap[batchFormat] ?? 'json';
       for (let i = 0; i < results.length; i++) {
         const data = results[i];
         const url = new URL(data.url);
-        const filename = `${i + 1}_${url.hostname.replace(/\./g, '_')}.${options.format === 'markdown' ? 'md' : 'json'}`;
+        const filename = `${i + 1}_${url.hostname.replace(/\./g, '_')}.${ext}`;
         const outputPath = path.join(outputDir, filename);
 
-        if (options.format === 'markdown') {
+        if (batchFormat === 'markdown') {
           const markdown = `# ${data.title || 'Untitled'}\n\n` +
             (data.author ? `**Author:** ${data.author}\n\n` : '') +
             (data.publishDate ? `**Published:** ${data.publishDate}\n\n` : '') +
             `**URL:** ${data.url}\n\n` +
             `---\n\n${data.markdown || data.content}\n`;
           await fs.writeFile(outputPath, markdown, 'utf-8');
+        } else if (batchFormat === 'html') {
+          await fs.writeFile(outputPath, toHtml(data), 'utf-8');
+        } else if (batchFormat === 'text') {
+          await fs.writeFile(outputPath, toText(data), 'utf-8');
+        } else if (batchFormat === 'csv') {
+          await fs.writeFile(outputPath, toCsv(data), 'utf-8');
+        } else if (batchFormat === 'yaml') {
+          await fs.writeFile(outputPath, toYaml(data), 'utf-8');
         } else {
           await fs.writeFile(outputPath, JSON.stringify(data, null, 2), 'utf-8');
         }

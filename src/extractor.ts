@@ -200,6 +200,16 @@ export class DataExtractor {
     // Convert to markdown
     data.markdown = this.turndown.turndown(data.content);
 
+    // Cleaned HTML (same as content, for format: html)
+    data.cleanedHtml = data.content;
+
+    // Plain text (strip all tags)
+    const $content = cheerio.load(data.content || '');
+    data.text = $content.root().text().trim().replace(/\s+/g, ' ').trim();
+
+    // Table data for CSV (first table in content)
+    data.tableData = this.extractTable($);
+
     // Extract custom fields
     if (this.schema?.custom) {
       data.metadata = {};
@@ -371,6 +381,23 @@ export class DataExtractor {
       }
     });
     return images;
+  }
+
+  /**
+   * Extract first table as string[][] (for CSV export)
+   */
+  private extractTable($: CheerioAPI): string[][] | undefined {
+    const $table = $('table').first();
+    if ($table.length === 0) return undefined;
+    const rows: string[][] = [];
+    $table.find('tr').each((_, tr) => {
+      const row: string[] = [];
+      $(tr).find('td, th').each((_, cell) => {
+        row.push($(cell).text().trim().replace(/\s+/g, ' '));
+      });
+      if (row.length > 0) rows.push(row);
+    });
+    return rows.length > 0 ? rows : undefined;
   }
 
   /**

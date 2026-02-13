@@ -18,9 +18,19 @@ export interface ScrapeOptions {
   /** Custom callback for pagination detection */
   paginationCallback?: (page: Page) => Promise<string | null>;
   /** Output format */
-  format?: 'markdown' | 'json';
+  format?: 'json' | 'markdown' | 'html' | 'text' | 'csv' | 'yaml';
   /** Custom extraction schema */
   extractionSchema?: ExtractionSchema;
+  /** Use LLM (Ollama/LM Studio) to extract structured JSON from cleaned content */
+  llmExtract?: boolean;
+  /** LLM endpoint (e.g. http://localhost:11434 for Ollama, http://localhost:1234 for LM Studio) */
+  llmEndpoint?: string;
+  /** Model name for Ollama (e.g. llama2) or LM Studio */
+  llmModel?: string;
+  /** Auto-detect extraction schema from sample page(s) (opt-in) */
+  autoDetectSchema?: boolean;
+  /** Number of sample URLs to use for schema detection (default: 1) */
+  schemaSamples?: number;
   /** User agent string */
   userAgent?: string;
   /** Request timeout in milliseconds (default: 30000) */
@@ -29,6 +39,14 @@ export interface ScrapeOptions {
   extractImages?: boolean;
   /** Whether to extract embedded media */
   extractMedia?: boolean;
+  /** Download images/videos/PDFs to a local folder */
+  downloadMedia?: boolean;
+  /** Output directory for downloaded media (used when downloadMedia is true). Default: ./media */
+  mediaOutputDir?: string;
+  /** Base64-embed small images in JSON (data URL). Default: false */
+  base64EmbedImages?: boolean;
+  /** Max size in bytes for base64 embedding (only smaller images are embedded). Default: 51200 (50KB) */
+  base64EmbedMaxBytes?: number;
 }
 
 export interface ExtractionSchema {
@@ -51,6 +69,26 @@ export interface ExtractionSchema {
   }>;
 }
 
+/** One downloaded asset: original URL and local path */
+export interface MediaDownload {
+  url: string;
+  localPath: string;
+  /** Suggested MIME type from response or extension */
+  mimeType?: string;
+}
+
+/** One base64-embedded asset (data URL) */
+export interface MediaEmbedded {
+  url: string;
+  dataUrl: string;
+  mimeType?: string;
+}
+
+/** Table data for CSV export (list-like / table pages) */
+export interface TableRow {
+  [column: string]: string;
+}
+
 export interface ScrapedData {
   url: string;
   title?: string;
@@ -58,7 +96,19 @@ export interface ScrapedData {
   publishDate?: string;
   content: string;
   markdown?: string;
+  /** Cleaned HTML (no scripts/nav/ads) */
+  cleanedHtml?: string;
+  /** Plain text only (no HTML) */
+  text?: string;
+  /** Extracted table rows for CSV (when tables detected) */
+  tableData?: string[][];
+  /** List-like items (e.g. for schema-based CSV) */
+  listItems?: TableRow[];
   images?: string[];
+  /** Downloaded media (when downloadMedia is used) */
+  mediaDownloads?: MediaDownload[];
+  /** Base64-embedded small images (when base64EmbedImages is used) */
+  mediaEmbedded?: MediaEmbedded[];
   metadata?: Record<string, any>;
   timestamp: string;
 }

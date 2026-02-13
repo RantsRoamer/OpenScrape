@@ -7,6 +7,9 @@ import { ScrapeOptions, ScrapedData } from './types';
 import { DataExtractor } from './extractor';
 import { PaginationHandler } from './pagination';
 import { RateLimiter } from './rateLimiter';
+import { resolveImageUrls, downloadMedia, embedSmallImages } from './mediaHandler';
+import { detectSchemaFromHtml } from './schemaDetector';
+import { extractWithLlm } from './llmExtractor';
 
 export class OpenScrape {
   private browser: Browser | null = null;
@@ -104,13 +107,56 @@ export class OpenScrape {
           // If no additional pages found, use original HTML
         }
 
+        // Optional: auto-detect schema from this page
+        let schema = options.extractionSchema;
+        if (options.autoDetectSchema) {
+          const detected = detectSchemaFromHtml(html);
+          schema = detected.schema;
+        }
+
         // Extract data
-        const extractor = new DataExtractor(options.extractionSchema);
-        const data = extractor.extract(
+        const extractor = new DataExtractor(schema);
+        let data = extractor.extract(
           html,
           options.url,
           options.extractImages !== false
         );
+
+        // Media: download and/or base64-embed images
+        const imageUrls = data.images?.length ? resolveImageUrls(options.url, data.images) : [];
+        const fetchOpts = { userAgent: options.userAgent, timeout: options.timeout ?? 30000 };
+
+        if (options.downloadMedia && imageUrls.length > 0) {
+          const outDir = options.mediaOutputDir ?? './media';
+          data.mediaDownloads = await downloadMedia(imageUrls, options.url, outDir, fetchOpts);
+        }
+
+        if (options.base64EmbedImages && imageUrls.length > 0) {
+          const maxBytes = options.base64EmbedMaxBytes ?? 51200;
+          data.mediaEmbedded = await embedSmallImages(imageUrls, options.url, maxBytes, fetchOpts);
+        }
+
+        // Optional: LLM-based extraction (merge structured fields from local Ollama/LM Studio)
+        if (options.llmExtract && options.llmEndpoint) {
+          try {
+            const llmContent = data.markdown || data.content || '';
+            const llmResult = await extractWithLlm(llmContent, {
+              endpoint: options.llmEndpoint,
+              model: options.llmModel,
+              timeout: options.timeout ?? 60000,
+              useMarkdown: true,
+            });
+            if (llmResult.title !== undefined) data.title = llmResult.title;
+            if (llmResult.author !== undefined) data.author = llmResult.author;
+            if (llmResult.publishDate !== undefined) data.publishDate = llmResult.publishDate;
+            if (llmResult.content !== undefined) data.content = llmResult.content;
+            if (llmResult.metadata) data.metadata = { ...data.metadata, ...llmResult.metadata };
+          } catch (e) {
+            // Don't fail the whole scrape if LLM is down
+            if (data.metadata == null) data.metadata = {};
+            data.metadata.llmError = e instanceof Error ? e.message : String(e);
+          }
+        }
 
         return data;
       } catch (error) {
