@@ -7,4 +7,5 @@ export { OpenScrape } from './scraper';
 export { DataExtractor } from './extractor';
 export { PaginationHandler } from './pagination';
 export { RateLimiter } from './rateLimiter';
+export { attachWebSocketServer, broadcastJobEvent, closeWebSocketServer } from './websocket';
 export * from './types';

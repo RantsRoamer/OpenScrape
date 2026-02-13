@@ -13,6 +13,7 @@ OpenScrape is a fully open-source web scraping library that mimics the core feat
 - ⚡ **Rate Limiting & Concurrency** - Safe request throttling with exponential backoff
 - 🖥️ **CLI Interface** - Easy-to-use command-line tools
 - 🌐 **REST API** - HTTP endpoints for programmatic access
+- 📡 **WebSocket** - Real-time job status updates over WebSocket
 - 🔧 **Extensible** - Custom extraction schemas and pagination callbacks
 
 ## Installation
@@ -99,6 +100,67 @@ Check job status:
 
 ```bash
 curl http://localhost:3000/status/{jobId}
+```
+
+### WebSocket (real-time updates)
+
+When you run `openscrape serve`, the server also exposes a WebSocket endpoint at path `/ws`. Connect to receive real-time events for crawl jobs.
+
+**Endpoint:** `ws://localhost:3000/ws` (or `wss://` in production with TLS)
+
+**Subscribe to a job:** Send a JSON message:
+
+```json
+{ "type": "subscribe", "jobId": "<jobId>" }
+```
+
+**Unsubscribe:**
+
+```json
+{ "type": "unsubscribe", "jobId": "<jobId>" }
+```
+
+**Server events** (you receive JSON):
+
+| Event            | When                    |
+|------------------|-------------------------|
+| `job:created`    | A new crawl job was created |
+| `job:processing` | Scraping has started    |
+| `job:completed`  | Scraping finished; `job.result` has the data |
+| `job:failed`     | Scraping failed; `job.error` has the message |
+
+**Example message:**
+
+```json
+{
+  "event": "job:completed",
+  "jobId": "abc-123",
+  "job": {
+    "id": "abc-123",
+    "url": "https://example.com/article",
+    "status": "completed",
+    "result": { "url": "...", "title": "...", "content": "...", "markdown": "..." },
+    "createdAt": "2025-01-15T12:00:00.000Z",
+    "completedAt": "2025-01-15T12:00:05.000Z"
+  },
+  "timestamp": "2025-01-15T12:00:05.000Z"
+}
+```
+
+**Minimal client example (Node):**
+
+```javascript
+const WebSocket = require('ws');
+const ws = new WebSocket('ws://localhost:3000/ws');
+
+ws.on('open', () => {
+  // First POST /crawl to get jobId, then:
+  ws.send(JSON.stringify({ type: 'subscribe', jobId: 'YOUR_JOB_ID' }));
+});
+ws.on('message', (data) => {
+  const msg = JSON.parse(data);
+  console.log(msg.event, msg.job?.status, msg.job?.result?.title);
+});
 ```
 
 ## Configuration
@@ -319,10 +381,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Roadmap
 
-- [ ] Browserless.com integration
-- [ ] AWS Lambda support
-- [ ] Proxy rotation
-- [ ] User-agent randomization
-- [ ] Plugin system for custom extraction logic
-- [ ] GraphQL API support
-- [ ] WebSocket support for real-time updates
+
+

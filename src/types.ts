@@ -83,3 +83,29 @@ export interface RateLimitConfig {
   /** Maximum backoff delay in ms (default: 60000) */
   maxBackoff?: number;
 }
+
+/** WebSocket event names for real-time job updates */
+export type JobEventType = 'job:created' | 'job:processing' | 'job:completed' | 'job:failed';
+
+/** WebSocket message payload for job events */
+export interface JobEventMessage {
+  event: JobEventType;
+  jobId: string;
+  job: Partial<CrawlJob>;
+  timestamp: string;
+}
+
+/** Client → server: subscribe to a job's updates */
+export interface WsSubscribeMessage {
+  type: 'subscribe';
+  jobId: string;
+}
+
+/** Client → server: unsubscribe from a job */
+export interface WsUnsubscribeMessage {
+  type: 'unsubscribe';
+  jobId: string;
+}
+
+/** Client → server: list of message types */
+export type WsClientMessage = WsSubscribeMessage | WsUnsubscribeMessage;

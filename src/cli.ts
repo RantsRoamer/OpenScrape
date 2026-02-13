@@ -151,6 +151,7 @@ program
     
     await startServer(port, host);
     console.log(`OpenScrape API server running on http://${host}:${port}`);
+    console.log(`WebSocket (real-time job updates): ws://${host === '0.0.0.0' ? 'localhost' : host}:${port}/ws`);
   });
 
 program.parse();

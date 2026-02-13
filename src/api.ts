@@ -3,9 +3,11 @@
  */
 
 import express, { Request, Response, NextFunction } from 'express';
+import { createServer } from 'http';
 import { OpenScrape } from './scraper';
 import { ScrapeOptions, CrawlJob } from './types';
 import { randomUUID } from 'crypto';
+import { attachWebSocketServer, broadcastJobEvent, closeWebSocketServer } from './websocket';
 
 const app = express();
 app.use(express.json());
@@ -35,6 +37,7 @@ app.post('/crawl', async (req: Request, res: Response, next: NextFunction) => {
       createdAt: new Date().toISOString(),
     };
     jobs.set(jobId, job);
+    broadcastJobEvent('job:created', jobId, job);
 
     // Process job asynchronously
     processJob(jobId, url, options).catch(error => {
@@ -43,6 +46,7 @@ app.post('/crawl', async (req: Request, res: Response, next: NextFunction) => {
         job.status = 'failed';
         job.error = error instanceof Error ? error.message : String(error);
         job.completedAt = new Date().toISOString();
+        broadcastJobEvent('job:failed', jobId, job);
       }
     });
 
@@ -104,21 +108,24 @@ async function processJob(jobId: string, url: string, options: Partial<ScrapeOpt
 
   try {
     job.status = 'processing';
-    
+    broadcastJobEvent('job:processing', jobId, job);
+
     const scrapeOptions: ScrapeOptions = {
       url,
       ...options,
     };
 
     const result = await scraper.scrape(scrapeOptions);
-    
+
     job.status = 'completed';
     job.result = result;
     job.completedAt = new Date().toISOString();
+    broadcastJobEvent('job:completed', jobId, job);
   } catch (error) {
     job.status = 'failed';
     job.error = error instanceof Error ? error.message : String(error);
     job.completedAt = new Date().toISOString();
+    broadcastJobEvent('job:failed', jobId, job);
   }
 }
 
@@ -131,11 +138,13 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
 });
 
 /**
- * Start server
+ * Start server (HTTP + WebSocket on path /ws)
  */
 export async function startServer(port: number = 3000, host: string = '0.0.0.0'): Promise<void> {
+  const server = createServer(app);
+  attachWebSocketServer(server);
   return new Promise((resolve) => {
-    app.listen(port, host, () => {
+    server.listen(port, host, () => {
       resolve();
     });
   });
@@ -148,11 +157,13 @@ export { app };
 
 // Handle graceful shutdown
 process.on('SIGTERM', async () => {
+  closeWebSocketServer();
   await scraper.close();
   process.exit(0);
 });
 
 process.on('SIGINT', async () => {
+  closeWebSocketServer();
   await scraper.close();
   process.exit(0);
 });

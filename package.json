@@ -1,6 +1,6 @@
 {
   "name": "openscrape",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Open-source web scraping library with headless browser support, pagination, and data extraction",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -41,10 +41,12 @@
     "cheerio": "^1.0.0-rc.12",
     "p-limit": "^5.0.0",
     "p-queue": "^8.0.1",
-    "winston": "^3.11.0"
+    "winston": "^3.11.0",
+    "ws": "^8.18.0"
   },
   "devDependencies": {
     "@types/express": "^4.17.21",
+    "@types/ws": "^8.5.10",
     "@types/node": "^20.10.5",
     "@types/turndown": "^5.0.5",
     "@typescript-eslint/eslint-plugin": "^6.15.0",
