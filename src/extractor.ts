@@ -4,7 +4,7 @@
 
 import TurndownService from 'turndown';
 import { gfm } from 'turndown-plugin-gfm';
-import { load } from 'cheerio';
+import * as cheerio from 'cheerio';
 import type { CheerioAPI } from 'cheerio';
 import { ExtractionSchema, ScrapedData } from './types';
 
@@ -35,7 +35,7 @@ export class DataExtractor {
    * Extract data from HTML content
    */
   extract(html: string, url: string, extractImages: boolean = true): ScrapedData {
-    const $ = load(html || '');
+    const $ = cheerio.load(html || '');
 
     const data: ScrapedData = {
       url,
@@ -74,7 +74,7 @@ export class DataExtractor {
     // If no custom schema or it didn't work, use default extraction
     if (!extractedContent || extractedContent.trim().length < 50) {
       // Work with a fresh copy of the HTML to avoid modifying the original
-      const $fresh = load(html);
+      const $fresh = cheerio.load(html);
       
       // Remove scripts, styles, noscript first
       $fresh('script, style, noscript').remove();
@@ -148,7 +148,7 @@ export class DataExtractor {
     
     // Ensure we have content - if still empty, use body as last resort
     if (!extractedContent || extractedContent.trim().length === 0) {
-      const $fallback = load(html);
+      const $fallback = cheerio.load(html);
       $fallback('script, style, noscript').remove();
       const body = $fallback('body');
       if (body.length > 0) {
@@ -175,7 +175,7 @@ export class DataExtractor {
     if (extractedContent && extractedContent.trim().length > 0) {
       data.content = extractedContent;
       try {
-        const content$ = load(extractedContent);
+        const content$ = cheerio.load(extractedContent);
         content$('script, style, noscript').remove();
         this.removeNoise(content$);
         // Remove nav/header/footer/ads that may be direct siblings of main content
