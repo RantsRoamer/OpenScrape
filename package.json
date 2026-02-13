@@ -1,6 +1,6 @@
 {
   "name": "openscrape",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "Open-source web scraping library with headless browser support, pagination, and data extraction",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -27,7 +27,7 @@
     "markdown",
     "json"
   ],
-  "author": "",
+  "author": "RantsRoamer",
   "license": "MIT",
   "repository": {
     "type": "git",
