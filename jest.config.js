@@ -18,6 +18,9 @@ module.exports = {
   transformIgnorePatterns: [
     '/node_modules/(?!p-queue|eventemitter3|p-timeout)',
   ],
+  moduleNameMapper: {
+    '^playwright$': '<rootDir>/jest/playwright.mock.js',
+  },
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
   collectCoverageFrom: [
     'src/**/*.ts',
