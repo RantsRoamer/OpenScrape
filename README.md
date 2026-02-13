@@ -37,6 +37,56 @@ npx playwright install chromium
 
 This downloads the Chromium browser required for headless rendering.
 
+### Docker
+
+You can run OpenScrape in a container with no local Node or Playwright install.
+
+**Build the image:**
+
+```bash
+docker build -t openscrape .
+```
+
+**Run the API server** (default; port 3000):
+
+```bash
+docker run -p 3000:3000 --init openscrape
+```
+
+Or with Docker Compose:
+
+```bash
+docker compose up --build
+```
+
+Then scrape via the API:
+
+```bash
+curl -X POST http://localhost:3000/crawl \
+  -H "Content-Type: application/json" \
+  -d '{"url": "https://example.com/article"}'
+```
+
+**Use the CLI inside the container** (crawl a URL, write output to a mounted volume):
+
+```bash
+docker run --rm -v "$(pwd)/out:/out" openscrape crawl https://example.com/article -o /out/article.json
+```
+
+**Batch scrape** (mount a file with URLs and an output directory):
+
+```bash
+docker run --rm -v "$(pwd)/urls.txt:/app/urls.txt" -v "$(pwd)/scraped:/out" openscrape batch /app/urls.txt --output-dir /out --format markdown
+```
+
+**Custom command** (override the default `serve`):
+
+```bash
+docker run --rm openscrape crawl https://example.com -o /tmp/out.json --format json
+```
+
+The image includes Chromium and its dependencies; the default command is `serve --port 3000 --host 0.0.0.0`. Use `--init` to avoid zombie processes. For large workloads, you may need to increase memory for the container.
+
 ## Quick Start
 
 ### CLI Usage

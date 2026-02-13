@@ -1,0 +1,19 @@
+# OpenScrape API server - run with: docker compose up
+# Then: curl -X POST http://localhost:3000/crawl -H "Content-Type: application/json" -d '{"url":"https://example.com"}'
+
+services:
+  openscrape:
+    build: .
+    container_name: openscrape
+    ports:
+      - "3000:3000"
+    # Default command: serve. Override to run crawl/batch, e.g.:
+    # docker compose run openscrape crawl https://example.com -o /out/article.json
+    command: ["serve", "--port", "3000", "--host", "0.0.0.0"]
+    # Optional: mount a volume for output when using crawl/batch
+    # volumes:
+    #   - ./output:/out
+    # Recommended for Chromium stability in containers
+    init: true
+    # Uncomment if you see Chromium crashes (use with caution; less isolation)
+    # ipc: host
