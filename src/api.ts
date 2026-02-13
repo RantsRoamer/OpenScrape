@@ -132,7 +132,7 @@ async function processJob(jobId: string, url: string, options: Partial<ScrapeOpt
 /**
  * Error handler
  */
-app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
   console.error('API Error:', err);
   res.status(500).json({ error: 'Internal server error', message: err.message });
 });

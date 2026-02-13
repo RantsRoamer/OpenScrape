@@ -2,7 +2,7 @@
  * Core scraping engine with headless browser support
  */
 
-import { chromium, Browser, Page } from 'playwright';
+import { chromium, Browser } from 'playwright';
 import { ScrapeOptions, ScrapedData } from './types';
 import { DataExtractor } from './extractor';
 import { PaginationHandler } from './pagination';
@@ -116,7 +116,7 @@ export class OpenScrape {
 
         // Extract data
         const extractor = new DataExtractor(schema);
-        let data = extractor.extract(
+        const data = extractor.extract(
           html,
           options.url,
           options.extractImages !== false

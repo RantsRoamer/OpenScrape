@@ -65,7 +65,7 @@ export interface ExtractionSchema {
     name: string;
     selector: string;
     attribute?: string;
-    transform?: (value: string) => any;
+    transform?: (value: string) => unknown;
   }>;
 }
 
@@ -109,7 +109,7 @@ export interface ScrapedData {
   mediaDownloads?: MediaDownload[];
   /** Base64-embedded small images (when base64EmbedImages is used) */
   mediaEmbedded?: MediaEmbedded[];
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   timestamp: string;
 }
 

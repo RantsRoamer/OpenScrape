@@ -3,5 +3,5 @@
  */
 
 declare module 'turndown-plugin-gfm' {
-  export function gfm(turndownService: any): void;
+  export function gfm(turndownService: unknown): void;
 }

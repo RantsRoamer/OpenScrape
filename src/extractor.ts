@@ -23,7 +23,7 @@ export class DataExtractor {
     // Configure turndown to preserve images
     this.turndown.addRule('images', {
       filter: 'img',
-      replacement: (content, node: any) => {
+      replacement: (content, node: { getAttribute(name: string): string | null }) => {
         const src = node.getAttribute('src');
         const alt = node.getAttribute('alt') || '';
         return src ? `![${alt}](${src})` : '';

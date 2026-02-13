@@ -5,7 +5,6 @@
 import type { ScrapedData } from './types';
 
 const DEFAULT_OLLAMA = 'http://localhost:11434';
-const DEFAULT_LM_STUDIO = 'http://localhost:1234/v1';
 
 const EXTRACT_PROMPT = `You are a web scraping assistant. Extract structured data from the following web page content.
 Return ONLY a valid JSON object with these keys (use null for missing): title, author, publishDate, content (plain text summary or main body), metadata (object for any other fields).
