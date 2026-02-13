@@ -8,7 +8,7 @@ module.exports = {
     '^.+\\.jsx?$': 'babel-jest',
   },
   transformIgnorePatterns: [
-    '/node_modules/(?!p-queue|eventemitter3|p-timeout)',
+    '/node_modules/(?!p-queue|eventemitter3|p-timeout|cheerio)',
   ],
   collectCoverageFrom: [
     'src/**/*.ts',

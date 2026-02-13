@@ -5,6 +5,7 @@
 import TurndownService from 'turndown';
 import { gfm } from 'turndown-plugin-gfm';
 import * as cheerio from 'cheerio';
+import type { CheerioAPI } from 'cheerio';
 import { ExtractionSchema, ScrapedData } from './types';
 
 export class DataExtractor {
@@ -216,7 +217,7 @@ export class DataExtractor {
   /**
    * Remove noise elements (ads, navigation, etc.)
    */
-  private removeNoise($: cheerio.CheerioAPI): void {
+  private removeNoise($: CheerioAPI): void {
     // Common noise selectors - be more selective to avoid removing content
     const noiseSelectors = [
       '.ad',
@@ -268,7 +269,7 @@ export class DataExtractor {
   /**
    * Extract title from page
    */
-  private extractTitle($: cheerio.CheerioAPI): string | undefined {
+  private extractTitle($: CheerioAPI): string | undefined {
     return $('meta[property="og:title"]').attr('content') ||
            $('title').text() ||
            $('h1').first().text() ||
@@ -278,7 +279,7 @@ export class DataExtractor {
   /**
    * Extract author from page
    */
-  private extractAuthor($: cheerio.CheerioAPI): string | undefined {
+  private extractAuthor($: CheerioAPI): string | undefined {
     return $('meta[name="author"]').attr('content') ||
            $('meta[property="article:author"]').attr('content') ||
            $('[rel="author"]').text() ||
@@ -289,7 +290,7 @@ export class DataExtractor {
   /**
    * Extract publish date from page
    */
-  private extractPublishDate($: cheerio.CheerioAPI): string | undefined {
+  private extractPublishDate($: CheerioAPI): string | undefined {
     return $('meta[property="article:published_time"]').attr('content') ||
            $('time[datetime]').attr('datetime') ||
            $('time').attr('datetime') ||
@@ -301,7 +302,7 @@ export class DataExtractor {
   /**
    * Extract main content from page
    */
-  private extractMainContent($: cheerio.CheerioAPI): string {
+  private extractMainContent($: CheerioAPI): string {
     // Try common article selectors
     const articleSelectors = [
       'article',
@@ -361,7 +362,7 @@ export class DataExtractor {
   /**
    * Extract images from page
    */
-  private extractImages($: cheerio.CheerioAPI): string[] {
+  private extractImages($: CheerioAPI): string[] {
     const images: string[] = [];
     $('img').each((_, element) => {
       const src = $(element).attr('src') || $(element).attr('data-src');
@@ -376,7 +377,7 @@ export class DataExtractor {
    * Extract value by CSS selector
    */
   private extractBySelector(
-    $: cheerio.CheerioAPI,
+    $: CheerioAPI,
     selector: string,
     attribute?: string
   ): string | undefined {
