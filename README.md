@@ -184,6 +184,7 @@ interface ScrapeOptions {
   llmEndpoint?: string;           // Ollama or LM Studio endpoint URL
   llmModel?: string;              // Model name (default: 'llama2')
   userAgent?: string;             // Custom user agent
+  proxy?: string | string[];      // Override proxy for this request (single URL or list for rotation)
   timeout?: number;               // Request timeout in ms (default: 30000)
   extractImages?: boolean;        // Extract images (default: true)
   extractMedia?: boolean;         // Extract embedded media (default: false)
@@ -359,6 +360,56 @@ const scraper = new OpenScrape({
 });
 ```
 
+### Proxy support (rotating & residential)
+
+Use a single proxy or a list for **round-robin rotation**. Supports **auth** (`http://user:pass@host:port`), **SOCKS5** (`socks5://host:port`), and residential proxy lists.
+
+- **Constructor:** set a default proxy for all scrapes (single URL or array).
+- **Per-scrape:** override with `options.proxy` for that request.
+- **Retries:** on **403**, **429**, or **timeout**, the next proxy in the list is tried automatically.
+
+**Formats:**
+
+- `http://host:port` or `https://host:port`
+- `http://user:pass@host:port` (auth)
+- `socks5://host:port` or `socks5://user:pass@host:port`
+
+**CLI:**
+
+```bash
+# Single proxy
+openscrape crawl https://example.com --proxy http://user:pass@proxy.example.com:8080 -o out.json
+
+# Rotating list (comma-separated)
+openscrape crawl https://example.com --proxy "http://p1:8080,http://p2:8080,socks5://p3:1080" -o out.json
+
+# Batch with proxy list
+openscrape batch urls.txt --proxy "http://user:pass@residential.example.com:8080" --output-dir ./out
+```
+
+**Programmatic:**
+
+```typescript
+// Single proxy or rotating list at construction
+const scraper = new OpenScrape({
+  proxy: 'http://user:pass@proxy.example.com:8080',
+  maxConcurrency: 3,
+});
+
+// Or pass an array for rotation
+const scraper = new OpenScrape({
+  proxy: ['http://p1:8080', 'socks5://p2:1080', 'http://user:pass@p3:8080'],
+});
+
+// Per-scrape override
+const data = await scraper.scrape({
+  url: 'https://example.com',
+  proxy: 'socks5://localhost:1080',
+});
+```
+
+**Low-level:** use `parseProxyString()`, `normalizeProxyInput()`, and `ProxyPool` from the package for custom rotation logic.
+
 ## CLI Commands
 
 ### `crawl <URL>`
@@ -378,6 +429,7 @@ Scrape a single URL and save to file.
 - `--llm-endpoint <url>` - LLM endpoint (e.g. `http://localhost:11434` for Ollama)
 - `--llm-model <name>` - Model name for LLM extraction (default: `llama2`)
 - `--auto-detect-schema` - Auto-detect extraction schema from the page
+- `--proxy <url>` - Proxy URL or comma-separated list for rotation (`http://user:pass@host:port`, `socks5://host:port`)
 
 **Example:**
 ```bash
@@ -403,6 +455,7 @@ Scrape multiple URLs from a file (one URL per line).
 - `--llm-endpoint <url>` - LLM endpoint URL
 - `--llm-model <name>` - Model name (default: `llama2`)
 - `--auto-detect-schema` - Auto-detect extraction schema from each page
+- `--proxy <url>` - Proxy URL or comma-separated list for rotation
 
 **Example:**
 ```bash

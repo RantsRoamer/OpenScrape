@@ -12,4 +12,6 @@ export { resolveUrl, resolveImageUrls, downloadMedia, embedSmallImages } from '.
 export { toHtml, toText, toCsv, toYaml } from './formatters';
 export { detectSchemaFromHtml } from './schemaDetector';
 export { extractWithLlm } from './llmExtractor';
+export { parseProxyString, normalizeProxyInput, ProxyPool } from './proxy';
+export type { PlaywrightProxyConfig } from './proxy';
 export * from './types';

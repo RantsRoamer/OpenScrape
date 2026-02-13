@@ -38,9 +38,11 @@ program
   .option('--llm-endpoint <url>', 'LLM endpoint (e.g. http://localhost:11434 for Ollama)')
   .option('--llm-model <name>', 'Model name (e.g. llama2)', 'llama2')
   .option('--auto-detect-schema', 'Auto-detect extraction schema from the page (opt-in)')
+  .option('--proxy <url>', 'Proxy URL (or comma-separated list for rotation). Supports http://user:pass@host:port and socks5://host:port')
   .action(async (url: string, options) => {
     try {
-      const scraper = new OpenScrape();
+      const proxyInput = options.proxy ? (options.proxy.includes(',') ? options.proxy.split(',').map((p: string) => p.trim()).filter(Boolean) : options.proxy) : undefined;
+      const scraper = new OpenScrape(proxyInput ? { proxy: proxyInput } : undefined);
 
       const format = ['json', 'markdown', 'html', 'text', 'csv', 'yaml'].includes(options.format) ? options.format : 'json';
       const scrapeOptions: ScrapeOptions = {
@@ -52,6 +54,7 @@ program
         nextSelector: options.nextSelector,
         timeout: parseInt(options.timeout, 10),
         userAgent: options.userAgent,
+        proxy: proxyInput,
         downloadMedia: options.downloadMedia === true,
         mediaOutputDir: options.mediaDir,
         base64EmbedImages: options.embedImages === true,
@@ -118,10 +121,13 @@ program
   .option('--llm-endpoint <url>', 'LLM endpoint (e.g. http://localhost:11434 for Ollama)')
   .option('--llm-model <name>', 'Model name for LLM extraction', 'llama2')
   .option('--auto-detect-schema', 'Auto-detect extraction schema from each page')
+  .option('--proxy <url>', 'Proxy URL or comma-separated list for rotation (http://user:pass@host:port, socks5://host:port)')
   .action(async (file: string, options) => {
     try {
+      const proxyInput = options.proxy ? (options.proxy.includes(',') ? options.proxy.split(',').map((p: string) => p.trim()).filter(Boolean) : options.proxy) : undefined;
       const scraper = new OpenScrape({
         maxConcurrency: parseInt(options.maxConcurrency, 10),
+        proxy: proxyInput,
       });
 
       // Read URLs from file

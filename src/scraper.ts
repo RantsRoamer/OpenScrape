@@ -2,25 +2,33 @@
  * Core scraping engine with headless browser support
  */
 
-import { chromium, Browser } from 'playwright';
-import { ScrapeOptions, ScrapedData } from './types';
+import { chromium, Browser, BrowserContext, Page } from 'playwright';
+import { OpenScrapeConfig, ScrapeOptions, ScrapedData } from './types';
 import { DataExtractor } from './extractor';
 import { PaginationHandler } from './pagination';
 import { RateLimiter } from './rateLimiter';
 import { resolveImageUrls, downloadMedia, embedSmallImages } from './mediaHandler';
 import { detectSchemaFromHtml } from './schemaDetector';
 import { extractWithLlm } from './llmExtractor';
+import { ProxyPool, normalizeProxyInput, type PlaywrightProxyConfig } from './proxy';
+
+const RETRYABLE_STATUSES = [403, 429];
+const RETRYABLE_MESSAGES = /timeout|timed out|deadline/i;
 
 export class OpenScrape {
   private browser: Browser | null = null;
   private rateLimiter: RateLimiter;
   private extractor: DataExtractor;
   private paginationHandler: PaginationHandler;
+  private defaultProxyPool: ProxyPool | null = null;
 
-  constructor(rateLimitConfig?: { maxRequestsPerSecond?: number; maxConcurrency?: number }) {
-    this.rateLimiter = new RateLimiter(rateLimitConfig);
+  constructor(config?: OpenScrapeConfig) {
+    this.rateLimiter = new RateLimiter(config);
     this.extractor = new DataExtractor();
     this.paginationHandler = new PaginationHandler();
+    if (config?.proxy) {
+      this.defaultProxyPool = new ProxyPool(config.proxy);
+    }
   }
 
   /**
@@ -45,28 +53,69 @@ export class OpenScrape {
   }
 
   /**
+   * Resolve proxy configs for this request (per-scrape override or default pool).
+   */
+  private getProxyConfigsForRequest(options: ScrapeOptions): PlaywrightProxyConfig[] {
+    if (options.proxy !== undefined) return normalizeProxyInput(options.proxy);
+    if (this.defaultProxyPool) {
+      const list: PlaywrightProxyConfig[] = [];
+      for (let i = 0; i < this.defaultProxyPool.size; i++) list.push(this.defaultProxyPool.getNext());
+      return list;
+    }
+    return [];
+  }
+
+  /**
+   * Create a browser context (with optional proxy) and page, navigate to url; retry with next proxy on 403/429/timeout.
+   */
+  private async createPageAndNavigate(
+    options: ScrapeOptions,
+    proxyConfigs: PlaywrightProxyConfig[]
+  ): Promise<{ context: BrowserContext; page: Page }> {
+    const timeout = options.timeout ?? 30000;
+    const waitUntil = options.render !== false ? 'networkidle' : 'domcontentloaded' as const;
+    const maxTries = Math.max(proxyConfigs.length, 1);
+
+    for (let tryIndex = 0; tryIndex < maxTries; tryIndex++) {
+      const proxy = proxyConfigs.length > 0 ? proxyConfigs[tryIndex % proxyConfigs.length] : undefined;
+      const context = await this.browser!.newContext(proxy ? { proxy } : {});
+
+      try {
+        const page = await context.newPage();
+        if (options.userAgent) {
+          await page.setExtraHTTPHeaders({ 'User-Agent': options.userAgent });
+        }
+        const response = await page.goto(options.url, { waitUntil, timeout });
+
+        const status = response?.status() ?? 0;
+        if (response && RETRYABLE_STATUSES.includes(status) && tryIndex < maxTries - 1) {
+          await context.close();
+          continue;
+        }
+
+        return { context, page };
+      } catch (err) {
+        await context.close();
+        const msg = err instanceof Error ? err.message : String(err);
+        if (RETRYABLE_MESSAGES.test(msg) && tryIndex < maxTries - 1) continue;
+        throw err;
+      }
+    }
+
+    throw new Error(`Failed to load ${options.url} after ${maxTries} attempt(s)`);
+  }
+
+  /**
    * Scrape a single URL
    */
   async scrape(options: ScrapeOptions): Promise<ScrapedData> {
     await this.init();
 
     return this.rateLimiter.execute(async () => {
-      const page = await this.browser!.newPage();
+      const proxyConfigs = this.getProxyConfigsForRequest(options);
+      const { context, page } = await this.createPageAndNavigate(options, proxyConfigs);
 
       try {
-        // Set user agent if provided
-        if (options.userAgent) {
-          await page.setExtraHTTPHeaders({
-            'User-Agent': options.userAgent,
-          });
-        }
-
-        // Navigate to URL
-        await page.goto(options.url, {
-          waitUntil: options.render !== false ? 'networkidle' : 'domcontentloaded',
-          timeout: options.timeout ?? 30000,
-        });
-
         // Wait for additional time if specified
         if (options.waitTime) {
           await page.waitForTimeout(options.waitTime);
@@ -162,7 +211,7 @@ export class OpenScrape {
       } catch (error) {
         throw new Error(`Failed to scrape ${options.url}: ${error instanceof Error ? error.message : String(error)}`);
       } finally {
-        await page.close();
+        await context.close();
       }
     });
   }

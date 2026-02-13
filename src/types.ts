@@ -4,9 +4,14 @@
 
 import { Page } from 'playwright';
 
+/** Proxy for scraping: single URL or list for rotation. Supports http://user:pass@host:port, socks5://host:port */
+export type ProxyInput = string | string[];
+
 export interface ScrapeOptions {
   /** URL to scrape */
   url: string;
+  /** Override proxy for this request: single proxy URL or list (rotated on retry). Supports auth and SOCKS5. */
+  proxy?: ProxyInput;
   /** Enable JavaScript rendering (default: true) */
   render?: boolean;
   /** Wait time in milliseconds after page load (default: 2000) */
@@ -132,6 +137,12 @@ export interface RateLimitConfig {
   backoffBase?: number;
   /** Maximum backoff delay in ms (default: 60000) */
   maxBackoff?: number;
+}
+
+/** Constructor options for OpenScrape (rate limit + optional default proxy) */
+export interface OpenScrapeConfig extends RateLimitConfig {
+  /** Default proxy for all scrapes: single URL or array for rotation. Supports http://user:pass@host:port, socks5://host:port */
+  proxy?: ProxyInput;
 }
 
 /** WebSocket event names for real-time job updates */
