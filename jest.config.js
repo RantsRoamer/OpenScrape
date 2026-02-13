@@ -2,14 +2,19 @@ module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
   roots: ['<rootDir>/src'],
-  testMatch: ['**/__tests__/**/*.ts', '**/?(*.)+(spec|test).ts'],
+  testMatch: [
+    '**/__tests__/**/*.ts',
+    '**/tests/**/*.ts',
+    '**/?(*.)+(spec|test).ts',
+  ],
   transform: {
     '^.+\\.tsx?$': ['ts-jest', { tsconfig: 'tsconfig.jest.json' }],
     '^.+\\.jsx?$': 'babel-jest',
   },
   transformIgnorePatterns: [
-    '/node_modules/(?!p-queue|eventemitter3|p-timeout|cheerio)',
+    '/node_modules/(?!p-queue|eventemitter3|p-timeout|cheerio|turndown|turndown-plugin-gfm)',
   ],
+  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
   collectCoverageFrom: [
     'src/**/*.ts',
     '!src/**/*.d.ts',
@@ -17,6 +22,5 @@ module.exports = {
     '!src/**/__tests__/**',
   ],
   coverageDirectory: 'coverage',
-  moduleFileExtensions: ['ts', 'js', 'json'],
   testTimeout: 30000,
 };
