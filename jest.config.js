@@ -4,8 +4,12 @@ module.exports = {
   roots: ['<rootDir>/src'],
   testMatch: ['**/__tests__/**/*.ts', '**/?(*.)+(spec|test).ts'],
   transform: {
-    '^.+\\.ts$': 'ts-jest',
+    '^.+\\.tsx?$': ['ts-jest', { tsconfig: 'tsconfig.jest.json' }],
+    '^.+\\.jsx?$': 'babel-jest',
   },
+  transformIgnorePatterns: [
+    '/node_modules/(?!p-queue|eventemitter3|p-timeout)',
+  ],
   collectCoverageFrom: [
     'src/**/*.ts',
     '!src/**/*.d.ts',

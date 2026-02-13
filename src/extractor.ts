@@ -112,15 +112,25 @@ export class DataExtractor {
         const body = $fresh('body');
         const bodyText = body.text().trim();
         if (bodyText.length > 50) {
-          // Get inner HTML of body - get children to avoid body tag wrapper
+          // Get inner HTML of body - exclude noise (nav, header, footer, ads)
           const bodyChildren = body.children();
           if (bodyChildren.length > 0) {
-            // Get HTML of each child and join
-            const childrenHtml = bodyChildren.map((_, el) => {
-              const html = $fresh(el).html();
-              return html || '';
-            }).get().filter(html => html && html.trim().length > 0);
-            
+            const noiseTags = ['nav', 'header', 'footer'];
+            const childrenHtml = bodyChildren
+              .filter((_, el) => {
+                const tagName = $fresh(el).prop('tagName')?.toString().toLowerCase();
+                const className = $fresh(el).attr('class') || '';
+                const isNoise = tagName && noiseTags.includes(tagName);
+                const isAd = /(\bad\b|ads|advertisement)/.test(className);
+                return !isNoise && !isAd;
+              })
+              .map((_, el) => {
+                const html = $fresh(el).html();
+                return html || '';
+              })
+              .get()
+              .filter(html => html && html.trim().length > 0);
+
             if (childrenHtml.length > 0) {
               extractedContent = childrenHtml.join('\n');
             }
@@ -162,33 +172,20 @@ export class DataExtractor {
     // Set content - remove noise if we have content
     // IMPORTANT: Always ensure content is set, even if noise removal fails
     if (extractedContent && extractedContent.trim().length > 0) {
-      // For now, use content directly without noise removal to ensure it works
-      // TODO: Re-enable noise removal once basic extraction is confirmed working
       data.content = extractedContent;
-      
-      // Attempt basic noise removal (just scripts/styles, not nav/header/footer)
       try {
         const content$ = cheerio.load(extractedContent);
         content$('script, style, noscript').remove();
+        this.removeNoise(content$);
+        // Remove nav/header/footer/ads that may be direct siblings of main content
+        content$('nav, header, footer, .ad, .ads, .advertisement').remove();
         const body = content$('body');
-        if (body.length > 0) {
-          const cleaned = body.html();
-          if (cleaned && cleaned.trim().length > 0) {
-            data.content = cleaned;
-          }
-        } else {
-          // No body tag, try root children
-          const rootChildren = content$.root().children();
-          if (rootChildren.length > 0) {
-            const cleaned = rootChildren.map((_, el) => content$(el).html()).get().filter(h => h).join('\n');
-            if (cleaned && cleaned.trim().length > 0) {
-              data.content = cleaned;
-            }
-          }
+        const rootHtml = body.length > 0 ? body.html()! : content$.root().html();
+        if (rootHtml && rootHtml.trim().length > 0) {
+          data.content = rootHtml;
         }
       } catch (error) {
         // If cleaning fails, keep original content
-        // data.content already set above
       }
     } else {
       data.content = '';

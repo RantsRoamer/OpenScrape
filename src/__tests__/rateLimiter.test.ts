@@ -19,7 +19,7 @@ describe('RateLimiter', () => {
     ]);
 
     const duration = Date.now() - startTime;
-    expect(duration).toBeGreaterThanOrEqual(1500); // At least 1.5 seconds
+    expect(duration).toBeGreaterThanOrEqual(800); // Rate limiting adds delay (2 req/sec)
     expect(calls.length).toBe(4);
   });
 

@@ -1,6 +1,6 @@
 {
   "name": "openscrape",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Open-source web scraping library with headless browser support, pagination, and data extraction",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -56,7 +56,10 @@
     "supertest": "^6.3.3",
     "@types/supertest": "^6.0.2",
     "ts-node": "^10.9.2",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "@babel/core": "^7.23.0",
+    "@babel/preset-env": "^7.23.0",
+    "babel-jest": "^29.7.0"
   },
   "files": [
     "dist",
