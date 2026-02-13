@@ -12,7 +12,7 @@ module.exports = {
     '^.+\\.jsx?$': 'babel-jest',
   },
   transformIgnorePatterns: [
-    '/node_modules/(?!p-queue|eventemitter3|p-timeout|cheerio|turndown|turndown-plugin-gfm)',
+    '/node_modules/(?!p-queue|eventemitter3|p-timeout)',
   ],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
   collectCoverageFrom: [
