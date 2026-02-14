@@ -4,19 +4,26 @@
  * Command-line interface for OpenScrape
  */
 
+import { readFileSync } from 'fs';
 import { Command } from 'commander';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { OpenScrape } from './scraper';
 import { ScrapeOptions } from './types';
 import { toHtml, toText, toCsv, toYaml } from './formatters';
+import { ABOUT, getAboutInfo } from './about';
+
+const packageJson = JSON.parse(
+  readFileSync(path.join(__dirname, '..', 'package.json'), 'utf-8')
+) as { version: string };
+const version = packageJson.version ?? '1.0.0';
 
 const program = new Command();
 
 program
   .name('openscrape')
-  .description('Open-source web scraping library')
-  .version('1.0.0');
+  .description('Open-source web scraping library. By: ' + ABOUT.by + ' | ' + ABOUT.repository)
+  .version(version);
 
 program
   .command('crawl')
@@ -198,6 +205,16 @@ program
       console.error('Error:', error instanceof Error ? error.message : String(error));
       process.exit(1);
     }
+  });
+
+program
+  .command('about')
+  .description('Show credits and repository')
+  .action(() => {
+    const info = getAboutInfo(version);
+    console.log(`${info.name} v${info.version}`);
+    console.log(`By: ${info.by}`);
+    console.log(info.repository);
   });
 
 program

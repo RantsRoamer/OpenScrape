@@ -585,6 +585,10 @@ List all crawl jobs.
 
 Health check endpoint.
 
+### `GET /about`
+
+Credits and repository info. Returns: `{ name, version, by, repository }` (e.g. by: John F. Gonzales, repository: https://github.com/RantsRoamer/OpenScrape).
+
 ## Development
 
 ### Prerequisites

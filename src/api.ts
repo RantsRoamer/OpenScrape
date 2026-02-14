@@ -2,12 +2,19 @@
  * REST API server for OpenScrape
  */
 
+import { readFileSync } from 'fs';
 import express, { Request, Response, NextFunction } from 'express';
 import { createServer } from 'http';
+import * as path from 'path';
 import { OpenScrape } from './scraper';
 import { ScrapeOptions, CrawlJob } from './types';
 import { randomUUID } from 'crypto';
 import { attachWebSocketServer, broadcastJobEvent, closeWebSocketServer } from './websocket';
+import { getAboutInfo } from './about';
+
+const pkg = JSON.parse(
+  readFileSync(path.join(__dirname, '..', 'package.json'), 'utf-8')
+) as { version: string };
 
 const app = express();
 app.use(express.json());
@@ -97,6 +104,13 @@ app.get('/jobs', (req: Request, res: Response) => {
  */
 app.get('/health', (req: Request, res: Response) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+/**
+ * GET /about - Credits and repository
+ */
+app.get('/about', (req: Request, res: Response) => {
+  res.json(getAboutInfo(pkg.version ?? '1.0.0'));
 });
 
 /**
